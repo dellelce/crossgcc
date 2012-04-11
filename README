@@ -1,0 +1,10 @@
+Set of scripts for cross compiling.
+
+This is very first version. Only one host and one target.
+
+Host: cygwin
+Target: Solaris 10 SPARC
+
+1438 11042012
+
+
