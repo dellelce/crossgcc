@@ -1,5 +1,13 @@
+#choose ksh or bash (I'm neutral)
 #
 # Configure 
+#
+# by Antonio Dell'Elce
+#
+# configure & build a toolchain
+# main objectives: simple
+#
+# name collision with GNU Configure, to be renamed
 #
 
 
@@ -8,15 +16,33 @@
 PROFILE="./sparc10.profile"
 . $PROFILE
 
-echo
-echo "MPFR: ${mpfr_version}"
-echo "GMP: ${gmp_version}"
-echo "MPC: ${mpc_version}"
-echo "BINUTILS: ${binutils_version}"
-echo "GCC: ${gcc_version}"
-echo
+[ -z "$selectedLanguages" ] && selectedLanguages="c,c++"
+
 
 ## FUNCTIONS ##
+
+#
+# optional debugging... first version
+#
+
+if_debug()
+{
+ return 1
+}
+
+#
+# show components versions
+#
+show_versions()
+{
+  echo
+  echo "MPFR: ${mpfr_version}"
+  echo "GMP: ${gmp_version}"
+  echo "MPC: ${mpc_version}"
+  echo "BINUTILS: ${binutils_version}"
+  echo "GCC: ${gcc_version}"
+  echo
+}
 
 #
 # try_makedir
@@ -135,11 +161,11 @@ configure_gmp()
 
   [ ! -f "${conf}" -o ! -s "${conf}" ] && return 2
 
-  set -x
+  if_debug && set -x
   ${conf}				\
 	--prefix="${prefix}"
   rc="$?"
-  set +x
+  if_debug && set +x
 
   return "$rc"
 }
@@ -156,11 +182,11 @@ build_gmp()
 
   [ ! -f "${mf}" -o ! -s "${mf}" ] && return 2
 
-  set -x
+  if_debug && set -x
   make && make install
   rc="$?"
 
-  set +x
+  if_debug && set +x
 
   return "$rc"
 }
@@ -178,12 +204,12 @@ configure_mpfr()
 
   [ ! -f "${conf}" -o ! -s "${conf}" ] && return 2
 
-  set -x
+  if_debug && set -x
   ${conf}				\
 	--with-gmp="${prefix}"		\
 	--prefix="${prefix}"
   rc="$?"
-  set +x
+  if_debug && set +x
 
   return "$rc"
 }
@@ -200,11 +226,11 @@ build_mpfr()
 
   [ ! -f "${mf}" -o ! -s "${mf}" ] && return 2
 
-  set -x
+  if_debug && set -x
   make && make install
   rc="$?"
 
-  set +x
+  if_debug && set +x
 
   return "$rc"
 }
@@ -220,7 +246,7 @@ configure_binutils()
 
   try_makedir ${binutils_build} || return 1
 
-  set -x
+  if_debug && set -x
   [ ! -f "${conf}" -o ! -s "${conf}" ] && return 2
 
   ${conf}				\
@@ -231,7 +257,7 @@ configure_binutils()
 	--disable-nls			\
 	--target="${target}"
   rc="$?"
-  set +x
+  if_debug && set +x
 
   return "$rc"
 }
@@ -248,17 +274,17 @@ build_binutils()
 
   [ ! -f "${mf}" -o ! -s "${mf}" ] && return 2
 
-  set -x
+  if_debug && set -x
   make && make install
   rc="$?"
 
-  set +x
+  if_debug && set +x
 
   return "$rc"
 }
 
 #
-# 
+# Run configure.sh for gcc 
 #
 
 configure_gcc()
@@ -267,7 +293,7 @@ configure_gcc()
 
   try_makedir ${gcc_build} || return 1
 
-  set -x
+  if_debug && set -x
   ${gcc_src}/configure			\
 	--prefix="${prefix}"		\
 	--target="${target}"		\
@@ -278,10 +304,10 @@ configure_gcc()
 	--with-gnu-as			\
 	--with-gnu-ld			\
 	--disable-nls			\
-	--enable-languages=c,c++
+	--enable-languages="$selectedLanguages"
 
   rc="$?"
-  set +x
+  if_debug && set +x
 
   return "$rc"
 }
@@ -297,7 +323,7 @@ configure_gccbootstrap()
   try_makedir ${gcc_bootstrap} || return 1
 
 #	--with-sysroot="${sysrootdir}"	\
-  set -x
+  if_debug && set -x
   ${gcc_src}/configure			\
 	--prefix="${prefix}"		\
 	--target="${target}"		\
@@ -312,7 +338,7 @@ configure_gccbootstrap()
 	--enable-languages=c,c++
 
   rc="$?"
-  set +x
+  if_debug && set +x
 
   return "$rc"
 }
@@ -324,7 +350,7 @@ configure_mpc()
 {
   typeset rc
 
-  set -x
+  if_debug && set -x
 
   try_makedir ${mpc_build} || return 1
 
@@ -334,7 +360,7 @@ configure_mpc()
 	--with-mpfr="${prefix}"
 
   rc="$?"
-  set +x
+  if_debug && set +x
 
   return "$rc"
 }
@@ -353,11 +379,11 @@ build_mpc()
 
   [ ! -f "${mf}" -o ! -s "${mf}" ] && return 2
 
-  set -x
+  if_debug && set -x
   make && make install
   rc="$?"
 
-  set +x
+  if_debug && set +x
 
   return "$rc"
 }
@@ -375,11 +401,11 @@ build_gcc()
 
   [ ! -f "${mf}" -o ! -s "${mf}" ] && return 2
 
-  set -x
+  if_debug && set -x
   make && make install
   rc="$?"
 
-  set +x
+  if_debug && set +x
 
   return "$rc"
 }
@@ -394,13 +420,13 @@ configure_newlib()
 
   try_makedir ${newlib_build} || return 1
 
-  set -x
+  if_debug && set -x
   ${newlib_src}/configure			\
 	--prefix="${prefix}"			\
 	--target="${target}"
 
   rc="$?"
-  set +x
+  if_debug && set +x
 
   return "$rc"
 }
@@ -454,12 +480,12 @@ conf()
 
  {
   echo "begin:${now}"
-  set -x
+  if_debug && set -x
 
   eval configure_${id} 2>&1 
   rc="$?"
   cd "$cwd"
-  set +x
+  if_debug && set +x
  } > "${log}" 2>&1 
 
  [ "$rc" -ne 0 ] && { echo "configuring $id failed"; } || { set_success "$id" conf; } 
@@ -515,8 +541,10 @@ build()
 
 quickCheck || { echo "Sanity checks failed."; exit 1; }
 
-# Run configure
+# show module versions
+show_versions
 
+# Run configure and then build
 #
 conf gmp || exit 1
 build gmp || exit 1
