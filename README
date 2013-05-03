@@ -7,4 +7,23 @@ Target: Solaris 10 SPARC
 
 1438 11042012
 
+===
 
+SHORT TERM OBJECTIVES:
+
+* check-file fixes
+* better sanity checks
+* optional debugging [i.e. if_debug && set -x
+
+OBJECTIVES:
+
+(random order)
+
+* support downloads of components
+* support of patching
+* support bionic
+
+
+TBD OBJECTIVES:
+
+* migrate to python
