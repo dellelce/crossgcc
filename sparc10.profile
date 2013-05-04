@@ -13,6 +13,8 @@ target="sparc-sun-solaris2.10"
 binutils_version="binutils-2.22"
 gcc_version="gcc-4.6.3"
 mpc_version="mpc-0.9"
+mpfr_version="mpfr-3.1.0"
+gmp_version="gmp-5.0.4"
 # c libraries
 newlib_version="newlib-1.20.0"
 glibc_version="glibc-2.15"
@@ -39,6 +41,10 @@ glibc_build="${baseDir}/glibc/build_${target_id}"
 # mpc / mpfr / gmp 
 mpc_src="${baseDir}/mpc/${mpc_version}"
 mpc_build="${baseDir}/mpc/build_${target_id}"
+gmp_src="${baseDir}/gmp/${gmp_version}"
+gmp_build="${baseDir}/gmp/build_${target_id}"
+mpfr_src="${baseDir}/mpfr/${mpfr_version}"
+mpfr_build="${baseDir}/mpfr/build_${target_id}"
 
 # sysroot
 sysrootdir="${prefix}/sysroot"
