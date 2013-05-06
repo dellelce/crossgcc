@@ -44,11 +44,6 @@ BEGIN {
 	     next
 	   }
 
-state == 1 { print ": S=1 " NR " " $0; state = 2; next; }
-state == 2 { print ": S=2 " NR " " $0; state = 3; next; }
-state == 3 { print ": S=3 " NR " " $0; state = 4; next; }
-state == 4 { print ": S=3 " NR " " $0; state = 0; next; }
-
 ### end loop ###
 
 END   {
