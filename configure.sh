@@ -16,8 +16,13 @@
 PROFILE="./sparc10.profile"
 . $PROFILE
 
+dryrun=0 # this must be changed to 0 for actual builds
+
 [ -z "$selectedLanguages" ] && selectedLanguages="c,c++"
 
+[ -z "$debug" ] && debug=0 # 0=yes 1=no
+
+state_ext="state"
 
 ## FUNCTIONS ##
 
@@ -27,7 +32,62 @@ PROFILE="./sparc10.profile"
 
 if_debug()
 {
- return 1
+ return $debug
+}
+
+#
+# mk_conf 
+# returns configure command.
+# added for dryrun support
+#
+mk_conf()
+{
+  typeset configure="$1"
+
+  [ ! -f "$configure" ] && return 1
+  [ "$dryrun" -eq 1 ] && { echo "echo $*"; return 0; }
+
+  echo "$*"
+}
+
+#
+# do_make
+# added for dryrun support
+#
+
+do_make()
+{
+ [ "$dryrun" -eq 1 ] && { echo "dry run: make && make install"; } || { make && make install; }
+}
+
+
+
+#
+# src & build directories
+# these should be moved out of profiles (made optional there)
+# this is the first step for that objective
+#
+
+default_dirs()
+{
+ binutils_src="${baseDir}/binutils/${binutils_version}"
+ binutils_build="${baseDir}/binutils/build_${target_id}"
+ gcc_src="${baseDir}/gcc/${gcc_version}"
+ gcc_build="${baseDir}/gcc/build_${target_id}"
+ glibc_src="${baseDir}/glibc/${glibc_version}"
+ glibc_build="${baseDir}/glibc/build_${target_id}"
+
+# mpc / mpfr / gmp 
+ mpc_src="${baseDir}/mpc/${mpc_version}"
+ mpc_build="${baseDir}/mpc/build_${target_id}"
+ gmp_src="${baseDir}/gmp/${gmp_version}"
+ gmp_build="${baseDir}/gmp/build_${target_id}"
+ mpfr_src="${baseDir}/mpfr/${mpfr_version}"
+ mpfr_build="${baseDir}/mpfr/build_${target_id}"
+
+# newlib is optional
+ newlib_src="${baseDir}/newlib/${newlib_version}"
+ newlib_build="${baseDir}/newlib/build_${target_id}"
 }
 
 #
@@ -35,13 +95,15 @@ if_debug()
 #
 show_versions()
 {
-  echo
-  echo "MPFR: ${mpfr_version}"
-  echo "GMP: ${gmp_version}"
-  echo "MPC: ${mpc_version}"
-  echo "BINUTILS: ${binutils_version}"
-  echo "GCC: ${gcc_version}"
-  echo
+cat << EOF
+
+ MPFR:     ${mpfr_version}
+ GMP:      ${gmp_version}
+ MPC:      ${mpc_version}
+ BINUTILS: ${binutils_version}
+ GCC:      ${gcc_version}
+
+EOF
 }
 
 #
@@ -117,6 +179,28 @@ testEnv()
 }
 
 #
+# get_state_time
+#
+# return date & time in state file
+#
+
+get_state_time()
+{
+  typeset id="$1"
+  typeset aid="$2"
+  typeset sval=""
+  typeset s_last s_hour s_day
+
+  [ -z "$aid" ] && return 1
+
+  eval typeset fp="\$${id}_build/${aid}.${state_ext}"
+
+  [ ! -s "$fp" ] && return 2 
+
+  cat 
+}
+
+#
 # read if exists success file
 #
 
@@ -131,6 +215,8 @@ get_success()
   
   [ -s "$fp" ] && { cat "${fp}"; } 
 }
+
+
 
 #
 # sets success file
@@ -155,11 +241,11 @@ set_success()
 configure_gmp()
 {
   typeset rc
-  typeset conf="${gmp_src}/configure"
+  typeset conf="$(mk_conf ${gmp_src}/configure)"
+
+  [ -z "$conf" ] && return 2
 
   try_makedir ${gmp_build} || return 1
-
-  [ ! -f "${conf}" -o ! -s "${conf}" ] && return 2
 
   if_debug && set -x
   ${conf}				\
@@ -183,7 +269,7 @@ build_gmp()
   [ ! -f "${mf}" -o ! -s "${mf}" ] && return 2
 
   if_debug && set -x
-  make && make install
+  do_make
   rc="$?"
 
   if_debug && set +x
@@ -198,11 +284,11 @@ build_gmp()
 configure_mpfr()
 {
   typeset rc
-  typeset conf="${mpfr_src}/configure"
+  typeset conf="$(mk_conf ${mpfr_src}/configure)"
+
+  [ -z "$conf" ] && return 2
 
   try_makedir ${mpfr_build} || return 1
-
-  [ ! -f "${conf}" -o ! -s "${conf}" ] && return 2
 
   if_debug && set -x
   ${conf}				\
@@ -227,7 +313,7 @@ build_mpfr()
   [ ! -f "${mf}" -o ! -s "${mf}" ] && return 2
 
   if_debug && set -x
-  make && make install
+  do_make
   rc="$?"
 
   if_debug && set +x
@@ -242,12 +328,13 @@ build_mpfr()
 configure_binutils()
 {
   typeset rc
-  typeset conf="${binutils_src}/configure"
+  typeset conf="$(mk_conf ${binutils_src}/configure)"
+
+  [ -z "$conf" ] && return 2
 
   try_makedir ${binutils_build} || return 1
 
   if_debug && set -x
-  [ ! -f "${conf}" -o ! -s "${conf}" ] && return 2
 
   ${conf}				\
 	--prefix="${prefix}"		\
@@ -275,7 +362,7 @@ build_binutils()
   [ ! -f "${mf}" -o ! -s "${mf}" ] && return 2
 
   if_debug && set -x
-  make && make install
+  do_make
   rc="$?"
 
   if_debug && set +x
@@ -290,11 +377,14 @@ build_binutils()
 configure_gcc()
 {
   typeset rc
+  typeset conf="$(mk_conf ${gcc_src}/configure)"
+
+  [ -z "$conf" ] && { echo "invalid configure"; return 2; }
 
   try_makedir ${gcc_build} || return 1
 
   if_debug && set -x
-  ${gcc_src}/configure			\
+  $conf					\
 	--prefix="${prefix}"		\
 	--target="${target}"		\
 	--with-sysroot="${sysrootdir}"	\
@@ -319,12 +409,14 @@ configure_gcc()
 configure_gccbootstrap()
 {
   typeset rc
+  typeset conf="$(mk_conf ${gcc_src}/configure)"
 
+  [ -z "$conf" ] && return 2
   try_makedir ${gcc_bootstrap} || return 1
 
 #	--with-sysroot="${sysrootdir}"	\
   if_debug && set -x
-  ${gcc_src}/configure			\
+  ${conf}				\
 	--prefix="${prefix}"		\
 	--target="${target}"		\
 	--with-gmp="${prefix}"		\
@@ -349,12 +441,15 @@ configure_gccbootstrap()
 configure_mpc()
 {
   typeset rc
+  typeset conf="$(mk_conf ${mpc_src}/configure)"
+
+  [ -z "$conf" ] && return 2
 
   if_debug && set -x
 
   try_makedir ${mpc_build} || return 1
 
-  ${mpc_src}/configure			\
+  ${conf}				\
 	--prefix="${prefix}"		\
 	--with-gmp="${prefix}"		\
 	--with-mpfr="${prefix}"
@@ -380,7 +475,7 @@ build_mpc()
   [ ! -f "${mf}" -o ! -s "${mf}" ] && return 2
 
   if_debug && set -x
-  make && make install
+  do_make
   rc="$?"
 
   if_debug && set +x
@@ -417,11 +512,13 @@ build_gcc()
 configure_newlib()
 {
   typeset rc
+  typeset conf="$(mk_conf ${newlib_src}/configure)"
 
+  [ -z "$conf" ] && return 2
   try_makedir ${newlib_build} || return 1
 
   if_debug && set -x
-  ${newlib_src}/configure			\
+  ${conf}					\
 	--prefix="${prefix}"			\
 	--target="${target}"
 
@@ -488,9 +585,10 @@ conf()
   if_debug && set +x
  } > "${log}" 2>&1 
 
- [ "$rc" -ne 0 ] && { echo "configuring $id failed"; } || { set_success "$id" conf; } 
+ [ "$rc" -ne 0 ] && { echo "configuring $id failed: rc = $rc"; return "$rc"; }
+ set_success "${id}" conf
 
- return "$rc"
+ return 0
 }
 
 #
@@ -528,9 +626,11 @@ build()
   cd "$cwd"
  } > "${log}" 2>&1
 
- [ "$rc" -ne 0 ] && { echo" configuring $id failed"; } || { set_success "${id}" build; } 
+ [ "$rc" -ne 0 ] && { echo" configuring $id failed: rc = $rc"; return "$rc"; } 
 
- return "$rc"
+ set_success "${id}" build;
+
+ return 0
 }
 
 
