@@ -47,7 +47,7 @@ BEGIN {
 ### end loop ###
 
 END   {
-	lastver=""
+	lastv = ""
 	for (i in vers_a)
 	{
 	  if (lastv == "")
